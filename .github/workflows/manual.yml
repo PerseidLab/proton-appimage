@@ -25,13 +25,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            jq tar wget libfuse2 libfuse3-3
-
-      - name: Download go-appimagetool
-        run: |
-          wget -q https://github.com/AppImage/go-appimage/releases/download/continuous/go-appimagetool-x86_64.AppImage
-          chmod +x go-appimagetool-x86_64.AppImage
+          sudo apt-get install -y jq tar wget
 
       - name: Set Environment Variables
         run: |
@@ -42,47 +36,32 @@ jobs:
       - name: Fetch and Extract GE-Proton
         run: |
           mkdir -p AppDir/opt/GE-Proton
-          wget -qO archive.tar.gz "${{ env.DOWNLOAD_URL }}"
-          tar -xzf archive.tar.gz -C AppDir/opt/GE-Proton --strip-components=1
-          rm -f archive.tar.gz
+          wget -qO archive.tar "${{ env.DOWNLOAD_URL }}"
+          tar -xf archive.tar -C AppDir/opt/GE-Proton --strip-components=1
+          rm archive.tar
 
-      - name: Create a minimal desktop entry
+      - name: Download go-appimage appimagetool
         run: |
-          mkdir -p AppDir/usr/share/applications AppDir/usr/share/pixmaps
-          cat > AppDir/GE-Proton.desktop <<'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=GE-Proton
-          Comment=Compatibility tool for games
-          Icon=GE-Proton
-          Exec=/opt/GE-Proton/proton
-          Categories=Utility;
-          EOF
+          # Automatically fetch the latest continuous appimagetool from go-appimage releases
+          TOOL_URL=$(wget -q https://github.com/probonopd/go-appimage/releases/expanded_assets/continuous -O - | grep -oP 'href="/probonopd/go-appimage/releases/download/continuous/\K[^"]+appimagetool[^"]*-x86_64\.AppImage' | head -n 1)
+          if [ -z "$TOOL_URL" ]; then
+            # Fallback direct query method
+            wget -q https://github.com/probonopd/go-appimage/releases/download/continuous/appimagetool-current-x86_64.AppImage -O appimagetool.AppImage
+          else
+            wget -q "https://github.com$TOOL_URL" -O appimagetool.AppImage
+          fi
+          chmod +x appimagetool.AppImage
 
-          touch AppDir/usr/share/pixmaps/GE-Proton.png
-
-      - name: Build AppImage
+      - name: Build AppImage with go-appimage
         run: |
-          ARCH=x86_64 ./go-appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir
+          # go-appimage appimagetool syntax requires explicit ARCH and VERSION
+          ARCH=x86_64 VERSION="${{ env.GE_VERSION }}" ./appimagetool.AppImage AppDir
 
       - name: Rename Output Safely
         run: |
-          GENERATED_FILE=$(find . -maxdepth 1 -type f -name "*.AppImage" ! -name "go-appimagetool-x86_64.AppImage" -print -quit)
-          if [ -z "$GENERATED_FILE" ]; then
-            echo "No generated AppImage found"
-            exit 1
-          fi
+          # Find the generated AppImage while ignoring the tool binary
+          GENERATED_FILE=$(find . -maxdepth 1 -name "*.AppImage" ! -name "appimagetool.AppImage" -print -quit)
           mv "$GENERATED_FILE" "${{ env.FINAL_NAME }}"
-
-      - name: Verify AppImage
-        run: |
-          if [ -f "${{ env.FINAL_NAME }}" ]; then
-            ls -lh "${{ env.FINAL_NAME }}"
-            echo "AppImage created successfully"
-          else
-            echo "Error: AppImage was not created"
-            exit 1
-          fi
 
       - name: Create Release
         if: github.ref == 'refs/heads/main'
@@ -91,10 +70,6 @@ jobs:
           tag_name: ${{ env.GE_VERSION }}
           name: Release ${{ env.GE_VERSION }} Standalone AppImage
           files: "${{ env.FINAL_NAME }}"
-          body: |
-            Manual standalone build of ${{ env.GE_VERSION }}
-
-            Source: ${{ env.DOWNLOAD_URL }}
-
+          body: "Manual standalone build of ${{ env.GE_VERSION }}\n\nSource: ${{ env.DOWNLOAD_URL }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
