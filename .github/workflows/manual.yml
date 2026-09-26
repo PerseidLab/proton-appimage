@@ -43,7 +43,7 @@ jobs:
       - name: Download go-appimage appimagetool
         run: |
           # Automatically fetch the latest continuous appimagetool from go-appimage releases
-          TOOL_URL=$(wget -q https://github.com/probonopd/go-appimage/releases/expanded_assets/continuous -O - | grep -oP 'href="/probonopd/go-appimage/releases/download/continuous/\K[^"]+appimagetool[^"]*-x86_64\.AppImage' | head -n 1)
+          TOOL_URL=$(wget -q https://github.com/probonopd/go-appimage/releases/expanded_assets/continuous -O - | grep -oP 'href="/probonopd/go-appimage/releases/download/continuous/\K[^"]+appimage[^"]*' | head -1)
           if [ -z "$TOOL_URL" ]; then
             # Fallback direct query method
             wget -q https://github.com/probonopd/go-appimage/releases/download/continuous/appimagetool-current-x86_64.AppImage -O appimagetool.AppImage
