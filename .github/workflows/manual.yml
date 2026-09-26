@@ -38,8 +38,7 @@ jobs:
           sudo apt-get install -y \
             curl \
             jq \
-            tar \
-            wget
+            tar
 
       - name: Fetch and extract GE-Proton
         shell: bash
@@ -51,10 +50,11 @@ jobs:
           echo "Downloading GE-Proton from:"
           echo "$DOWNLOAD_URL"
 
-          wget \
+          curl \
             --fail \
-            --show-progress \
-            --output-document=archive.tar \
+            --location \
+            --progress-bar \
+            --output archive.tar \
             "$DOWNLOAD_URL"
 
           test -s archive.tar
@@ -110,8 +110,8 @@ jobs:
             --silent \
             --show-error \
             --location \
-            "$TOOL_URL" \
-            --output appimagetool.AppImage
+            --output appimagetool.AppImage \
+            "$TOOL_URL"
 
           test -s appimagetool.AppImage
           chmod +x appimagetool.AppImage
