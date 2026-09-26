@@ -25,7 +25,13 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2 jq tar wget
+          sudo apt-get install -y --no-install-recommends \
+            jq tar wget libfuse2 libfuse3-3
+
+      - name: Download go-appimagetool
+        run: |
+          wget -q https://github.com/AppImage/go-appimage/releases/download/continuous/go-appimagetool-x86_64.AppImage
+          chmod +x go-appimagetool-x86_64.AppImage
 
       - name: Set Environment Variables
         run: |
@@ -36,20 +42,47 @@ jobs:
       - name: Fetch and Extract GE-Proton
         run: |
           mkdir -p AppDir/opt/GE-Proton
-          wget -qO archive.tar "${{ env.DOWNLOAD_URL }}"
-          tar -xf archive.tar -C AppDir/opt/GE-Proton --strip-components=1
-          rm archive.tar
+          wget -qO archive.tar.gz "${{ env.DOWNLOAD_URL }}"
+          tar -xzf archive.tar.gz -C AppDir/opt/GE-Proton --strip-components=1
+          rm -f archive.tar.gz
+
+      - name: Create a minimal desktop entry
+        run: |
+          mkdir -p AppDir/usr/share/applications AppDir/usr/share/pixmaps
+          cat > AppDir/GE-Proton.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=GE-Proton
+          Comment=Compatibility tool for games
+          Icon=GE-Proton
+          Exec=/opt/GE-Proton/proton
+          Categories=Utility;
+          EOF
+
+          touch AppDir/usr/share/pixmaps/GE-Proton.png
 
       - name: Build AppImage
         run: |
-          chmod +x appimagetool-x86_64.AppImage
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir
+          ARCH=x86_64 ./go-appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir
 
       - name: Rename Output Safely
         run: |
-          # Find the new AppImage while ignoring the committed tool
-          GENERATED_FILE=$(find . -maxdepth 1 -name "*.AppImage" ! -name "appimagetool-x86_64.AppImage" -print -quit)
+          GENERATED_FILE=$(find . -maxdepth 1 -type f -name "*.AppImage" ! -name "go-appimagetool-x86_64.AppImage" -print -quit)
+          if [ -z "$GENERATED_FILE" ]; then
+            echo "No generated AppImage found"
+            exit 1
+          fi
           mv "$GENERATED_FILE" "${{ env.FINAL_NAME }}"
+
+      - name: Verify AppImage
+        run: |
+          if [ -f "${{ env.FINAL_NAME }}" ]; then
+            ls -lh "${{ env.FINAL_NAME }}"
+            echo "AppImage created successfully"
+          else
+            echo "Error: AppImage was not created"
+            exit 1
+          fi
 
       - name: Create Release
         if: github.ref == 'refs/heads/main'
@@ -58,6 +91,11 @@ jobs:
           tag_name: ${{ env.GE_VERSION }}
           name: Release ${{ env.GE_VERSION }} Standalone AppImage
           files: "${{ env.FINAL_NAME }}"
-          body: "Manual standalone build of ${{ env.GE_VERSION }}\n\nSource: ${{ env.DOWNLOAD_URL }}"
+          body: |
+            Manual standalone build of ${{ env.GE_VERSION }}
+
+            Source: ${{ env.DOWNLOAD_URL }}
+
+            Built with go-appimagetool (supports FUSE2 and FUSE3)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
