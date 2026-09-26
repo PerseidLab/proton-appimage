@@ -4,12 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       ge_version:
-        description: 'Version Name (e.g., GE-Proton9-23)'
+        description: "Version name, for example GE-Proton9-23"
         required: true
-        default: 'GE-Proton-Custom'
+        default: "GE-Proton-Custom"
+        type: string
+
       download_url:
-        description: 'Direct link to the .tar.gz file'
+        description: "Direct link to the GE-Proton archive"
         required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,58 +21,144 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      GE_VERSION: ${{ inputs.ge_version }}
+      DOWNLOAD_URL: ${{ inputs.download_url }}
+      FINAL_NAME: ${{ inputs.ge_version }}-standalone.AppImage
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
+          set -euo pipefail
+
           sudo apt-get update
-          sudo apt-get install -y jq tar wget
+          sudo apt-get install -y \
+            curl \
+            jq \
+            tar \
+            wget
 
-      - name: Set Environment Variables
+      - name: Fetch and extract GE-Proton
+        shell: bash
         run: |
-          echo "GE_VERSION=${{ github.event.inputs.ge_version }}" >> $GITHUB_ENV
-          echo "DOWNLOAD_URL=${{ github.event.inputs.download_url }}" >> $GITHUB_ENV
-          echo "FINAL_NAME=${{ github.event.inputs.ge_version }}-standalone.AppImage" >> $GITHUB_ENV
+          set -euo pipefail
 
-      - name: Fetch and Extract GE-Proton
-        run: |
           mkdir -p AppDir/opt/GE-Proton
-          wget -qO archive.tar "${{ env.DOWNLOAD_URL }}"
-          tar -xf archive.tar -C AppDir/opt/GE-Proton --strip-components=1
-          rm archive.tar
 
-      - name: Download go-appimage appimagetool
+          echo "Downloading GE-Proton from:"
+          echo "$DOWNLOAD_URL"
+
+          wget \
+            --fail \
+            --show-progress \
+            --output-document=archive.tar \
+            "$DOWNLOAD_URL"
+
+          test -s archive.tar
+
+          tar \
+            --extract \
+            --file=archive.tar \
+            --directory=AppDir/opt/GE-Proton \
+            --strip-components=1
+
+          rm -f archive.tar
+
+      - name: Download latest go-appimage appimagetool
+        shell: bash
         run: |
-          # Automatically fetch the latest continuous appimagetool from go-appimage releases
-          TOOL_URL=$(wget -q https://github.com/probonopd/go-appimage/releases/expanded_assets/continuous -O - | grep -oP 'href="/probonopd/go-appimage/releases/download/continuous/\K[^"]+appimage[^"]*' | head -1)
+          set -euo pipefail
+
+          API_URL="https://api.github.com/repos/probonopd/go-appimage/releases/tags/continuous"
+
+          echo "Finding the latest x86_64 appimagetool asset..."
+
+          TOOL_URL="$(
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --header "Accept: application/vnd.github+json" \
+              "$API_URL" |
+            jq -r '
+              [
+                .assets[]
+                | select(
+                    .name
+                    | test("^appimagetool-[0-9]+-x86_64\\.AppImage$")
+                  )
+              ]
+              | first
+              | .browser_download_url // empty
+            '
+          )"
+
           if [ -z "$TOOL_URL" ]; then
-            # Fallback direct query method
-            wget -q https://github.com/probonopd/go-appimage/releases/download/continuous/appimagetool-current-x86_64.AppImage -O appimagetool.AppImage
-          else
-            wget -q "https://github.com$TOOL_URL" -O appimagetool.AppImage
+            echo "Error: no x86_64 appimagetool asset was found."
+            exit 1
           fi
+
+          echo "Downloading:"
+          echo "$TOOL_URL"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            "$TOOL_URL" \
+            --output appimagetool.AppImage
+
+          test -s appimagetool.AppImage
           chmod +x appimagetool.AppImage
 
-      - name: Build AppImage with go-appimage
+      - name: Build AppImage
+        shell: bash
         run: |
-          # go-appimage appimagetool syntax requires explicit ARCH and VERSION
-          ARCH=x86_64 VERSION="${{ env.GE_VERSION }}" ./appimagetool.AppImage AppDir
+          set -euo pipefail
 
-      - name: Rename Output Safely
+          ARCH=x86_64 \
+          VERSION="$GE_VERSION" \
+          ./appimagetool.AppImage AppDir
+
+      - name: Rename output
+        shell: bash
         run: |
-          # Find the generated AppImage while ignoring the tool binary
-          GENERATED_FILE=$(find . -maxdepth 1 -name "*.AppImage" ! -name "appimagetool.AppImage" -print -quit)
-          mv "$GENERATED_FILE" "${{ env.FINAL_NAME }}"
+          set -euo pipefail
 
-      - name: Create Release
+          GENERATED_FILE="$(
+            find . \
+              -maxdepth 1 \
+              -type f \
+              -name "*.AppImage" \
+              ! -name "appimagetool.AppImage" \
+              -print \
+              -quit
+          )"
+
+          if [ -z "$GENERATED_FILE" ]; then
+            echo "Error: appimagetool did not produce an AppImage."
+            exit 1
+          fi
+
+          mv "$GENERATED_FILE" "$FINAL_NAME"
+
+          echo "Created $FINAL_NAME"
+
+      - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.GE_VERSION }}
           name: Release ${{ env.GE_VERSION }} Standalone AppImage
-          files: "${{ env.FINAL_NAME }}"
-          body: "Manual standalone build of ${{ env.GE_VERSION }}\n\nSource: ${{ env.DOWNLOAD_URL }}"
+          files: ${{ env.FINAL_NAME }}
+          body: |
+            Manual standalone build of ${{ env.GE_VERSION }}
+
+            Source: ${{ env.DOWNLOAD_URL }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
