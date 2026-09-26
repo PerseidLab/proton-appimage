@@ -108,13 +108,39 @@ fi
 PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
 
 # Internal Paths
-INTERNAL_PROTON_BASE="$HERE/opt/GE-Proton"
+INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/GE-Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
+
+# Extract AppImage if not already extracted
+APPIMAGE_MARKER="$PROTON_PREFIX/.appimage_extracted"
+if [ ! -f "$APPIMAGE_MARKER" ]; then
+    echo "Extracting AppImage to $PROTON_PREFIX..."
+    mkdir -p "$PROTON_PREFIX"
+    
+    # Extract AppImage
+    cd "$PROTON_PREFIX"
+    "$APPIMAGE_PATH" --appimage-extract > /dev/null 2>&1
+    
+    if [ $? -eq 0 ]; then
+        # Move extracted contents to prefix root
+        if [ -d "$PROTON_PREFIX/squashfs-root" ]; then
+            mv "$PROTON_PREFIX/squashfs-root"/* "$PROTON_PREFIX/" 2>/dev/null || true
+            rmdir "$PROTON_PREFIX/squashfs-root" 2>/dev/null || true
+        fi
+        touch "$APPIMAGE_MARKER"
+        echo "AppImage extracted successfully!"
+    else
+        echo "Error: Failed to extract AppImage"
+        exit 1
+    fi
+else
+    echo "AppImage already extracted, skipping extraction..."
+fi
 
 # Export Environment Variables
 export WINEPREFIX="$PROTON_PREFIX/pfx"
 export STEAM_COMPAT_DATA_PATH="$PROTON_PREFIX"
-export STEAM_COMPAT_CLIENT_INSTALL_PATH="$HERE"
+export STEAM_COMPAT_CLIENT_INSTALL_PATH="$PROTON_PREFIX"
 export WINEDLLPATH="$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE/files/lib/wine"
 export PROTON_DISABLE_LSTEAMCLIENT=1
 export PROTON_NO_STEAM=1
@@ -123,7 +149,7 @@ export PROTON_MEDIA_USE_GST=1
 export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa712"
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
-export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$HERE/opt/GE-Proton/files/lib/i386-linux-gnu/gstreamer-1.0/:$HERE/opt/GE-Proton/files/lib/x86_64-linux-gnu/gstreamer-1.0/:$HERE/opt/GE-Proton/files/lib/gstreamer-1.0/"
+export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_BASE/files/lib/i386-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/gstreamer-1.0/"
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 
