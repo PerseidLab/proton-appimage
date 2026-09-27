@@ -205,8 +205,8 @@ add_to_ld_library_path() {
 
 
 # Scan UMU library directories and add all i386-linux-gnu and x86_64-linux-gnu subdirectories to LD_LIBRARY_PATH
-UMU_DIR="$HOME/.local/share/umu/steamrt4/"
-#UMU_DIR="$HOME/.local/share/umu/steamrt3/"
+#UMU_DIR="$HOME/.local/share/umu/steamrt4/"
+UMU_DIR="$HOME/.local/share/umu/steamrt3/"
 if [ -d "$UMU_DIR" ]; then
     while IFS= read -r -d '' dir; do
         add_to_ld_library_path "$dir"
