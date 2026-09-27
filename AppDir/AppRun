@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Paths 
+# Paths
 HERE="$(dirname "$(readlink -f "${0}")")"
 APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
 APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
@@ -52,7 +52,7 @@ Terminal=false
 Categories=Utility;
 EOF
 
-cat <<EOF > "$APPS_DIR/proton-cmd.desktop"
+    cat <<EOF > "$APPS_DIR/proton-cmd.desktop"
 [Desktop Entry]
 Name=Proton Command Prompt
 Exec="$APPIMAGE_PATH" cmd
@@ -89,9 +89,54 @@ elif [[ "$1" == "--uninstall" ]]; then
     exit 0
 fi
 
-# Default Argument Logic
+# GUI Menu Logic with Tkinter Fallback
 if [ -z "$1" ]; then
-    set -- "explorer"
+    if python3 -c "import tkinter" &>/dev/null; then
+        python3 - << EOF
+import os
+import subprocess
+import sys
+import tkinter as tk
+from tkinter import messagebox
+
+appimage = os.getenv("APPIMAGE_PATH")
+
+def execute(arg):
+    try:
+        subprocess.Popen([appimage, arg])
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to execute command:\n{e}")
+
+root = tk.Tk()
+root.title("Proton Standalone")
+root.geometry("340x280")
+root.resizable(False, False)
+
+frame = tk.Frame(root, padx=15, pady=15)
+frame.pack(fill="both", expand=True)
+
+label = tk.Label(frame, text="Proton Runner Options", font=("Helvetica", 11, "bold"))
+label.pack(pady=(0, 10))
+
+buttons = [
+    ("Launch Wine Explorer", lambda: execute("explorer")),
+    ("Launch Winecfg", lambda: execute("winecfg")),
+    ("Kill Wine (wineboot -k)", lambda: execute("wineboot -k")),
+    ("Install MIME Integration", lambda: execute("--install")),
+    ("Uninstall MIME Integration", lambda: execute("--uninstall"))
+]
+
+for text, cmd in buttons:
+    btn = tk.Button(frame, text=text, width=30, command=cmd)
+    btn.pack(pady=3)
+
+root.mainloop()
+EOF
+        exit 0
+    else
+        echo "Tkinter non-functional or not found. Falling back to default 'explorer'..."
+        set -- "explorer"
+    fi
 fi
 
 # Path Resolution Logic
