@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       ge_version:
-        description: "Version name, for example GE-Proton9-23"
+        description: "Version name, for example Proton9-23"
         required: true
-        default: "GE-Proton-Custom"
+        default: "Proton-Custom"
         type: string
 
       download_url:
-        description: "Direct link to the GE-Proton archive"
+        description: "Direct link to the Proton archive"
         required: true
         type: string
 
@@ -39,14 +39,14 @@ jobs:
             jq \
             tar
 
-      - name: Fetch and extract GE-Proton
+      - name: Fetch and extract Proton
         shell: bash
         run: |
           set -euo pipefail
 
-          mkdir -p AppDir/opt/GE-Proton
+          mkdir -p AppDir/opt/Proton
 
-          echo "Downloading GE-Proton from:"
+          echo "Downloading Proton from:"
           echo "$DOWNLOAD_URL"
 
           curl \
@@ -61,7 +61,7 @@ jobs:
           tar \
             --extract \
             --file=archive.tar \
-            --directory=AppDir/opt/GE-Proton \
+            --directory=AppDir/opt/Proton \
             --strip-components=1
 
           rm -f archive.tar
