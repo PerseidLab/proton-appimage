@@ -98,7 +98,6 @@ fi
 # If the first argument is a file (or a link to a file), resolve its real path.
 if [ -f "$1" ]; then
     REAL_PATH=$(readlink -f "$1")
-    # Shift the old path out and set the real path as the first argument
     shift
     set -- "$REAL_PATH" "$@"
     echo "Resolved shortcut/link to: $REAL_PATH"
@@ -111,28 +110,27 @@ PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
 INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/GE-Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
 
-# Extract AppImage if not already extracted
+# Extract the AppImage into PROTON_PREFIX if needed
 APPIMAGE_MARKER="$PROTON_PREFIX/.appimage_extracted"
 if [ ! -f "$APPIMAGE_MARKER" ]; then
     echo "Extracting AppImage to $PROTON_PREFIX..."
     mkdir -p "$PROTON_PREFIX"
-    
-    # Extract AppImage
+
     cd "$PROTON_PREFIX"
-    "$APPIMAGE_PATH" --appimage-extract > /dev/null 2>&1
-    
-    if [ $? -eq 0 ]; then
-        # Move extracted contents to prefix root
-        if [ -d "$PROTON_PREFIX/squashfs-root" ]; then
-            mv "$PROTON_PREFIX/squashfs-root"/* "$PROTON_PREFIX/" 2>/dev/null || true
-            rmdir "$PROTON_PREFIX/squashfs-root" 2>/dev/null || true
-        fi
-        touch "$APPIMAGE_MARKER"
-        echo "AppImage extracted successfully!"
-    else
+    "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1 || {
         echo "Error: Failed to extract AppImage"
         exit 1
+    }
+
+    if [ -d "$PROTON_PREFIX/squashfs-root" ]; then
+        shopt -s dotglob
+        mv "$PROTON_PREFIX/squashfs-root"/* "$PROTON_PREFIX"/ 2>/dev/null || true
+        rmdir "$PROTON_PREFIX/squashfs-root" 2>/dev/null || true
+        shopt -u dotglob
     fi
+
+    touch "$APPIMAGE_MARKER"
+    echo "AppImage extracted successfully!"
 else
     echo "AppImage already extracted, skipping extraction..."
 fi
@@ -174,7 +172,6 @@ SLR_LIBS=""
 
 if [ -n "$SLR_ROOT" ]; then
     echo "Found Steam Linux Runtime (or equivalent) at: $SLR_ROOT"
-    # Search for i386-linux-gnu folders and extract all unique subdirs containing .so files
     SL_SEARCH_RESULT=$(find "$SLR_ROOT" -type d -name "i386-linux-gnu" -exec find {} -name "*.so*" -printf '%h\n' \; 2>/dev/null | sort -u | tr '\n' ':')
     SLR_LIBS="$SL_SEARCH_RESULT"
 else
@@ -189,12 +186,6 @@ export PROTON_NO_FSYNC=0
 export WINEFSYNC=1
 export WINESYNC=1
 
-# Execution Logic
-if [ ! -d "$PROTON_PREFIX/pfx" ]; then
-    echo "Creating prefix structure at $PROTON_PREFIX/pfx..."
-    mkdir -p "$PROTON_PREFIX/pfx"
-fi
-
 if [ ! -f "$PROTON_PREFIX/tracked_files" ]; then
     echo "First run or prefix incomplete. Launching Proton..."
     if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
@@ -206,3 +197,5 @@ echo "Launching Wine..."
 if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
     exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
 fi
+
+exit 1
