@@ -1,5 +1,4 @@
-name: Build GE-Proton AppImage (Manual)
-
+name: Build Proton AppImage
 on:
   workflow_dispatch:
     inputs:
