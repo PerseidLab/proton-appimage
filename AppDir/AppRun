@@ -192,7 +192,6 @@ export PROTON_USE_WOW64=1
 export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714"
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
-export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_BASE/files/lib/i386-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu/gstreamer-1.0/"
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 
@@ -204,13 +203,6 @@ add_to_ld_library_path() {
     fi
 }
 
-# Scan the AppImage-root lib/x86_64-linux-gnu directory and add all directories to LD_LIBRARY_PATH
-LIB_X86_PATH="$PROTON_PREFIX/lib/x86_64-linux-gnu"
-if [ -d "$LIB_X86_PATH" ]; then
-    while IFS= read -r -d '' dir; do
-        add_to_ld_library_path "$dir"
-    done < <(find "$LIB_X86_PATH" -mindepth 1 -maxdepth 1 -type d -print0)
-fi
 
 # Scan UMU library directories and add all i386-linux-gnu and x86_64-linux-gnu subdirectories to LD_LIBRARY_PATH
 UMU_DIR="$HOME/.local/share/umu"
