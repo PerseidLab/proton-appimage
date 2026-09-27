@@ -189,40 +189,14 @@ export WINEDLLPATH="$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE
 export PROTON_DISABLE_LSTEAMCLIENT=1
 export PROTON_NO_STEAM=1
 export PROTON_USE_WOW64=1
-export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa712"
+export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa7"
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
-export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_BASE/files/lib/i386-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/gstreamer-1.0/"
+export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_BASE/files/lib/i386-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu/gstreamer-1.0/"
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 
-# Define potential Steam installation roots
-PATHS=(
-    "$HOME/.steam/steam/steamapps/common/SteamLinuxRuntime_sniper/"
-    "$HOME/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps/common/SteamLinuxRuntime_sniper/"
-    "$HOME/.local/share/umu/steamrt3/"
-)
-
-# Find the first path that actually exists
-SLR_ROOT=""
-for path in "${PATHS[@]}"; do
-    if [ -d "$path" ]; then
-        SLR_ROOT="$path"
-        break
-    fi
-done
-
-SLR_LIBS=""
-
-if [ -n "$SLR_ROOT" ]; then
-    echo "Found Steam Linux Runtime (or equivalent) at: $SLR_ROOT"
-    SL_SEARCH_RESULT=$(find "$SLR_ROOT" -type d -name "i386-linux-gnu" -exec find {} -name "*.so*" -printf '%h\n' \; 2>/dev/null | sort -u | tr '\n' ':')
-    SLR_LIBS="$SL_SEARCH_RESULT"
-else
-    echo "Warning: SteamLinuxRuntime_sniper/umu not found. Using system libraries..."
-fi
-
-export LD_LIBRARY_PATH="$SLR_LIBS$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
 
 export PROTON_NO_ESYNC=0
 export WINEESYNC=1
