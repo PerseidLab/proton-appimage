@@ -46,7 +46,7 @@ EOF
 [Desktop Entry]
 Name=Proton Reboot (Kill)
 Exec="$APPIMAGE_PATH" wineboot -k
-Icon=system-reboot
+Icon=folder-wine
 Type=Application
 Terminal=false
 Categories=Utility;
@@ -153,7 +153,7 @@ fi
 PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
 
 # Internal Paths
-INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/GE-Proton"
+INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
 
 # Extract the AppImage into PROTON_PREFIX if needed
@@ -163,7 +163,7 @@ if [ ! -f "$APPIMAGE_MARKER" ]; then
     mkdir -p "$PROTON_PREFIX"
 
     cd "$PROTON_PREFIX"
-    "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1 || {
+    "$APPIMAGE_PATH" --appimaextract >/dev/null 2>&1 || {
         echo "Error: Failed to extract AppImage"
         exit 1
     }
@@ -189,12 +189,36 @@ export WINEDLLPATH="$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE
 export PROTON_DISABLE_LSTEAMCLIENT=1
 export PROTON_NO_STEAM=1
 export PROTON_USE_WOW64=1
-export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa7"
+export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714"
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
 export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_BASE/files/lib/i386-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu/gstreamer-1.0/"
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
+
+# Function to add paths to LD_LIBRARY_PATH without duplicates
+add_to_ld_library_path() {
+    local new_path="$1"
+    if [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$new_path"
+    fi
+}
+
+# Scan the AppImage-root lib/x86_64-linux-gnu directory and add all directories to LD_LIBRARY_PATH
+LIB_X86_PATH="$PROTON_PREFIX/lib/x86_64-linux-gnu"
+if [ -d "$LIB_X86_PATH" ]; then
+    while IFS= read -r -d '' dir; do
+        add_to_ld_library_path "$dir"
+    done < <(find "$LIB_X86_PATH" -mindepth 1 -maxdepth 1 -type d -print0)
+fi
+
+# Scan UMU library directories and add all i386-linux-gnu and x86_64-linux-gnu subdirectories to LD_LIBRARY_PATH
+UMU_DIR="$HOME/.local/share/umu"
+if [ -d "$UMU_DIR" ]; then
+    while IFS= read -r -d '' dir; do
+        add_to_ld_library_path "$dir"
+    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
+fi
 
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
 
