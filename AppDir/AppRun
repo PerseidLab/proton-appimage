@@ -153,7 +153,7 @@ fi
 PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
 
 # Internal Paths
-INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/GE-Proton"
+INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
 
 # Extract the AppImage into PROTON_PREFIX if needed
@@ -163,7 +163,7 @@ if [ ! -f "$APPIMAGE_MARKER" ]; then
     mkdir -p "$PROTON_PREFIX"
 
     cd "$PROTON_PREFIX"
-    "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1 || {
+    "$APPIMAGE_PATH" --appimaextract >/dev/null 2>&1 || {
         echo "Error: Failed to extract AppImage"
         exit 1
     }
