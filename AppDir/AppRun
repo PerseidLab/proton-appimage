@@ -196,11 +196,19 @@ export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 
+# Function to add paths to LD_LIBRARY_PATH without duplicates
+add_to_ld_library_path() {
+    local new_path="$1"
+    if [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$new_path"
+    fi
+}
+
 # Scan lib/x86_64-linux-gnu and add all directories to LD_LIBRARY_PATH
 LIB_X86_PATH="$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu"
 if [ -d "$LIB_X86_PATH" ]; then
     while IFS= read -r -d '' dir; do
-        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
+        add_to_ld_library_path "$dir"
     done < <(find "$LIB_X86_PATH" -mindepth 1 -maxdepth 1 -type d -print0)
 fi
 
@@ -208,7 +216,7 @@ fi
 UMU_DIR="$HOME/.local/share/umu"
 if [ -d "$UMU_DIR" ]; then
     while IFS= read -r -d '' dir; do
-        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
+        add_to_ld_library_path "$dir"
     done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
 fi
 
