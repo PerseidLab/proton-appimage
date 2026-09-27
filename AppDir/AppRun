@@ -2,7 +2,7 @@
 
 # Paths
 HERE="$(dirname "$(readlink -f "${0}")")"
-APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
+export APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
 APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
 APPS_DIR="$HOME/.local/share/applications"
 
@@ -101,9 +101,11 @@ from tkinter import messagebox
 
 appimage = os.getenv("APPIMAGE_PATH")
 
-def execute(arg):
+def execute(args):
     try:
-        subprocess.Popen([appimage, arg])
+        # Pass the script path followed by the command arguments
+        cmd = [appimage] + args
+        subprocess.Popen(cmd)
     except Exception as e:
         messagebox.showerror("Error", f"Failed to execute command:\n{e}")
 
@@ -119,11 +121,11 @@ label = tk.Label(frame, text="Proton Runner Options", font=("Helvetica", 11, "bo
 label.pack(pady=(0, 10))
 
 buttons = [
-    ("Launch Wine Explorer", lambda: execute("explorer")),
-    ("Launch Winecfg", lambda: execute("winecfg")),
-    ("Kill Wine (wineboot -k)", lambda: execute("wineboot -k")),
-    ("Install MIME Integration", lambda: execute("--install")),
-    ("Uninstall MIME Integration", lambda: execute("--uninstall"))
+    ("Launch Wine Explorer", lambda: execute(["explorer"])),
+    ("Launch Winecfg", lambda: execute(["winecfg"])),
+    ("Kill Wine (wineboot -k)", lambda: execute(["wineboot", "-k"])),
+    ("Install MIME Integration", lambda: execute(["--install"])),
+    ("Uninstall MIME Integration", lambda: execute(["--uninstall"]))
 ]
 
 for text, cmd in buttons:
@@ -140,7 +142,6 @@ EOF
 fi
 
 # Path Resolution Logic
-# If the first argument is a file (or a link to a file), resolve its real path.
 if [ -f "$1" ]; then
     REAL_PATH=$(readlink -f "$1")
     shift
@@ -196,7 +197,7 @@ export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 
-# Define potential Steam installation roots (Standard, Flatpak, and umu)
+# Define potential Steam installation roots
 PATHS=(
     "$HOME/.steam/steam/steamapps/common/SteamLinuxRuntime_sniper/"
     "$HOME/.var/app/com.valvesoftware.Steam/.steam/steam/steamapps/common/SteamLinuxRuntime_sniper/"
@@ -212,7 +213,6 @@ for path in "${PATHS[@]}"; do
     fi
 done
 
-# Initialize SLR_LIBS
 SLR_LIBS=""
 
 if [ -n "$SLR_ROOT" ]; then
