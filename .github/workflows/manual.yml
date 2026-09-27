@@ -157,7 +157,7 @@ jobs:
           name: Release ${{ env.GE_VERSION }} Standalone AppImage
           files: ${{ env.FINAL_NAME }}
           body: |
-            Manual standalone build of ${{ env.GE_VERSION }}
+            AppImage build of ${{ env.GE_VERSION }}
 
             Source: ${{ env.DOWNLOAD_URL }}
         env:
