@@ -163,7 +163,7 @@ if [ ! -f "$APPIMAGE_MARKER" ]; then
     mkdir -p "$PROTON_PREFIX"
 
     cd "$PROTON_PREFIX"
-    "$APPIMAGE_PATH" --appimaextract >/dev/null 2>&1 || {
+    "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1 || {
         echo "Error: Failed to extract AppImage"
         exit 1
     }
