@@ -189,7 +189,7 @@ export WINEDLLPATH="$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE
 export PROTON_DISABLE_LSTEAMCLIENT=1
 export PROTON_NO_STEAM=1
 export PROTON_USE_WOW64=1
-export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa7c0,0x20d6/0xd002"
+export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714"
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
 export GST_PLUGIN_SYSTEM_PATH_1_0="$GST_PLUGIN_SYSTEM_PATH_1_0:$INTERNAL_PROTON_BASE/files/lib/i386-linux-gnu/gstreamer-1.0/:$INTERNAL_PROTON_BASE/files/lib/x86_64-linux-gnu/gstreamer-1.0/"
@@ -202,6 +202,14 @@ if [ -d "$LIB_X86_PATH" ]; then
     while IFS= read -r -d '' dir; do
         export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
     done < <(find "$LIB_X86_PATH" -mindepth 1 -maxdepth 1 -type d -print0)
+fi
+
+# Scan UMU library directories and add all i386-linux-gnu and x86_64-linux-gnu subdirectories to LD_LIBRARY_PATH
+UMU_DIR="$HOME/.local/share/umu"
+if [ -d "$UMU_DIR" ]; then
+    while IFS= read -r -d '' dir; do
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
+    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
 fi
 
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
