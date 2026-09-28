@@ -16,7 +16,7 @@ Exec="$APPIMAGE_PATH" %f
 Icon=steam
 Type=Application
 Terminal=false
-Categories=Utility
+Categories=Utility;
 MimeType=application/x-ms-dos-executable;application/x-msi;application/x-msdownload;
 EOF
 
@@ -77,15 +77,28 @@ EOF
              "$APPS_DIR"/proton-cmd.desktop \
              "$APPS_DIR"/proton-control.desktop
 
+    # Register default applications
     xdg-mime default run-proton.desktop application/x-ms-dos-executable
     xdg-mime default run-proton.desktop application/x-msi
     xdg-mime default run-proton.desktop application/x-msdownload
+
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Installation complete!"
     exit 0
 
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
+
+    # Clear MIME default associations
+    for mime in application/x-ms-dos-executable application/x-msi application/x-msdownload; do
+        current_default=$(xdg-mime query default "$mime")
+        if [[ "$current_default" == "run-proton.desktop" ]]; then
+            # Revert default association by removing entry from mimeapps.list if present
+            sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
+        fi
+    done
+
+    # Remove shortcut files
     rm -f "$APPS_DIR/run-proton.desktop" \
           "$APPS_DIR/proton-explorer.desktop" \
           "$APPS_DIR/proton-winecfg.desktop" \
@@ -93,7 +106,6 @@ elif [[ "$1" == "--uninstall" ]]; then
           "$APPS_DIR/proton-cmd.desktop" \
           "$APPS_DIR/proton-control.desktop"
 
-    xdg-mime uninstall "$APPS_DIR/run-proton.desktop" 2>/dev/null
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Uninstallation complete!"
     exit 0
@@ -242,4 +254,3 @@ fi
 
 exit 1
 
-exit 1
