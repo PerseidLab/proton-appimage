@@ -65,6 +65,7 @@ EOF
     cat <<EOF > "$APPS_DIR/proton-control.desktop"
 [Desktop Entry]
 Name=Proton Control Panel
+Exec="$APPS_DIR/proton-control.desktop"
 Exec="$APPIMAGE_PATH" control
 Icon=preferences-system
 Type=Application
@@ -72,7 +73,14 @@ Terminal=false
 Categories=Utility;
 EOF
 
-    chmod +x "$APPS_DIR"/run-proton.desktop "$APPS_DIR"/proton-explorer.desktop "$APPS_DIR"/proton-winecfg.desktop "$APPS_DIR"/proton-reboot.desktop
+    # Make all created desktop entries executable
+    chmod +x "$APPS_DIR"/run-proton.desktop \
+             "$APPS_DIR"/proton-explorer.desktop \
+             "$APPS_DIR"/proton-winecfg.desktop \
+             "$APPS_DIR"/proton-reboot.desktop \
+             "$APPS_DIR"/proton-cmd.desktop \
+             "$APPS_DIR"/proton-control.desktop
+
     xdg-mime default run-proton.desktop application/x-ms-dos-executable
     xdg-mime default run-proton.desktop application/x-msi
     xdg-mime default run-proton.desktop application/x-msdownload
@@ -82,7 +90,13 @@ EOF
 
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
-    rm -f "$APPS_DIR/run-proton.desktop" "$APPS_DIR/proton-explorer.desktop" "$APPS_DIR/proton-winecfg.desktop" "$APPS_DIR/proton-reboot.desktop" "$APPS_DIR/proton-cmd.desktop" "$APPS_DIR/proton-control.desktop"
+    rm -f "$APPS_DIR/run-proton.desktop" \
+          "$APPS_DIR/proton-explorer.desktop" \
+          "$APPS_DIR/proton-winecfg.desktop" \
+          "$APPS_DIR/proton-reboot.desktop" \
+          "$APPS_DIR/proton-cmd.desktop" \
+          "$APPS_DIR/proton-control.desktop"
+
     xdg-mime uninstall "$APPS_DIR/run-proton.desktop" 2>/dev/null
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Uninstallation complete!"
@@ -198,11 +212,12 @@ export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 # Function to add paths to LD_LIBRARY_PATH without duplicates
 add_to_ld_library_path() {
     local new_path="$1"
-    if [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
+    if [ -z "$LD_LIBRARY_PATH" ]; then
+        export LD_LIBRARY_PATH="$new_path"
+    elif [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
         export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$new_path"
     fi
 }
-
 
 # Scan UMU library directories and add all i386-linux-gnu and x86_64-linux-gnu subdirectories to LD_LIBRARY_PATH
 UMU_DIR="$HOME/.local/share/umu/steamrt4/"
@@ -212,8 +227,6 @@ if [ -d "$UMU_DIR" ]; then
         add_to_ld_library_path "$dir"
     done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
 fi
-
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
 
 export PROTON_NO_ESYNC=0
 export WINEESYNC=1
