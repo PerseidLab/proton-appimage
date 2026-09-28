@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Paths
 HERE="$(dirname "$(readlink -f "${0}")")"
 export APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
 APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
 APPS_DIR="$HOME/.local/share/applications"
 
-# Installation / Uninstallation Logic
 if [[ "$1" == "--install" ]]; then
     mkdir -p "$APPS_DIR"
     echo "Installing desktop shortcuts and MIME types..."
@@ -18,7 +16,7 @@ Exec="$APPIMAGE_PATH" %f
 Icon=steam
 Type=Application
 Terminal=false
-Categories=Utility
+Categories=Utility;
 MimeType=application/x-ms-dos-executable;application/x-msi;application/x-msdownload;
 EOF
 
@@ -65,7 +63,6 @@ EOF
     cat <<EOF > "$APPS_DIR/proton-control.desktop"
 [Desktop Entry]
 Name=Proton Control Panel
-Exec="$APPS_DIR/proton-control.desktop"
 Exec="$APPIMAGE_PATH" control
 Icon=preferences-system
 Type=Application
@@ -73,7 +70,6 @@ Terminal=false
 Categories=Utility;
 EOF
 
-    # Make all created desktop entries executable
     chmod +x "$APPS_DIR"/run-proton.desktop \
              "$APPS_DIR"/proton-explorer.desktop \
              "$APPS_DIR"/proton-winecfg.desktop \
@@ -81,15 +77,28 @@ EOF
              "$APPS_DIR"/proton-cmd.desktop \
              "$APPS_DIR"/proton-control.desktop
 
+    # Register default applications
     xdg-mime default run-proton.desktop application/x-ms-dos-executable
     xdg-mime default run-proton.desktop application/x-msi
     xdg-mime default run-proton.desktop application/x-msdownload
+
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Installation complete!"
     exit 0
 
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
+
+    # Clear MIME default associations
+    for mime in application/x-ms-dos-executable application/x-msi application/x-msdownload; do
+        current_default=$(xdg-mime query default "$mime")
+        if [[ "$current_default" == "run-proton.desktop" ]]; then
+            # Revert default association by removing entry from mimeapps.list if present
+            sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
+        fi
+    done
+
+    # Remove shortcut files
     rm -f "$APPS_DIR/run-proton.desktop" \
           "$APPS_DIR/proton-explorer.desktop" \
           "$APPS_DIR/proton-winecfg.desktop" \
@@ -97,13 +106,11 @@ elif [[ "$1" == "--uninstall" ]]; then
           "$APPS_DIR/proton-cmd.desktop" \
           "$APPS_DIR/proton-control.desktop"
 
-    xdg-mime uninstall "$APPS_DIR/run-proton.desktop" 2>/dev/null
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Uninstallation complete!"
     exit 0
 fi
 
-# GUI Menu Logic with Tkinter Fallback
 if [ -z "$1" ]; then
     if python3 -c "import tkinter" &>/dev/null; then
         python3 - << EOF
@@ -117,7 +124,6 @@ appimage = os.getenv("APPIMAGE_PATH")
 
 def execute(args):
     try:
-        # Pass the script path followed by the command arguments
         cmd = [appimage] + args
         subprocess.Popen(cmd)
     except Exception as e:
@@ -125,7 +131,7 @@ def execute(args):
 
 root = tk.Tk()
 root.title("Proton Standalone")
-root.geometry("340x280")
+root.geometry("340x380")
 root.resizable(False, False)
 
 frame = tk.Frame(root, padx=15, pady=15)
@@ -137,6 +143,8 @@ label.pack(pady=(0, 10))
 buttons = [
     ("Launch Wine Explorer", lambda: execute(["explorer"])),
     ("Launch Winecfg", lambda: execute(["winecfg"])),
+    ("Launch cmd", lambda: execute(["cmd"])),
+    ("Launch regedit", lambda: execute(["regedit"])),
     ("Kill Wine (wineboot -k)", lambda: execute(["wineboot", "-k"])),
     ("Install MIME Integration", lambda: execute(["--install"])),
     ("Uninstall MIME Integration", lambda: execute(["--uninstall"]))
@@ -155,7 +163,6 @@ EOF
     fi
 fi
 
-# Path Resolution Logic
 if [ -f "$1" ]; then
     REAL_PATH=$(readlink -f "$1")
     shift
@@ -163,14 +170,11 @@ if [ -f "$1" ]; then
     echo "Resolved shortcut/link to: $REAL_PATH"
 fi
 
-# Prefix Path
 PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
 
-# Internal Paths
 INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
 
-# Extract the AppImage into PROTON_PREFIX if needed
 APPIMAGE_MARKER="$PROTON_PREFIX/.appimage_extracted"
 if [ ! -f "$APPIMAGE_MARKER" ]; then
     echo "Extracting AppImage to $PROTON_PREFIX..."
@@ -195,7 +199,6 @@ else
     echo "AppImage already extracted, skipping extraction..."
 fi
 
-# Export Environment Variables
 export WINEPREFIX="$PROTON_PREFIX/pfx"
 export STEAM_COMPAT_DATA_PATH="$PROTON_PREFIX"
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="$PROTON_PREFIX"
@@ -208,42 +211,47 @@ export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
 export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
-
-# Function to add paths to LD_LIBRARY_PATH without duplicates
-add_to_ld_library_path() {
-    local new_path="$1"
-    if [ -z "$LD_LIBRARY_PATH" ]; then
-        export LD_LIBRARY_PATH="$new_path"
-    elif [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
-        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$new_path"
-    fi
-}
-
-# Scan UMU library directories and add all i386-linux-gnu and x86_64-linux-gnu subdirectories to LD_LIBRARY_PATH
-UMU_DIR="$HOME/.local/share/umu/steamrt4/"
-#UMU_DIR="$HOME/.local/share/umu/steamrt3/"
-if [ -d "$UMU_DIR" ]; then
-    while IFS= read -r -d '' dir; do
-        add_to_ld_library_path "$dir"
-    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
-fi
-
 export PROTON_NO_ESYNC=0
 export WINEESYNC=1
 export PROTON_NO_FSYNC=0
 export WINEFSYNC=1
 export WINESYNC=1
 
+
+SLR_ENTRY=""
+
+#UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
+#STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
+
+UMU_SLR="$HOME/.local/share/umu/steamrt4/_v2-entry-point"
+STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point"
+
+if [ -f "$UMU_SLR" ]; then
+    SLR_ENTRY="$UMU_SLR"
+elif [ -f "$STEAM_SLR" ]; then
+    SLR_ENTRY="$STEAM_SLR"
+fi
+
 if [ ! -f "$PROTON_PREFIX/tracked_files" ]; then
     echo "First run or prefix incomplete. Launching Proton..."
     if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
-        python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+        if [ -n "$SLR_ENTRY" ]; then
+            "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+        else
+            python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+        fi
     fi
 fi
 
 echo "Launching Wine..."
 if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
-    exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+    if [ -n "$SLR_ENTRY" ]; then
+        echo "Using Steam Linux Runtime: $SLR_ENTRY"
+        exec "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+    else
+        echo "Steam Linux Runtime not found. Executing Proton directly..."
+        exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+    fi
 fi
 
 exit 1
