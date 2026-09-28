@@ -220,11 +220,11 @@ export WINESYNC=1
 
 SLR_ENTRY=""
 
-UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
-STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
+#UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
+#STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
 
-#UMU_SLR="$HOME/.local/share/umu/steamrt4/_v2-entry-point"
-#STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point"
+UMU_SLR="$HOME/.local/share/umu/steamrt4/_v2-entry-point"
+STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point"
 
 if [ -f "$UMU_SLR" ]; then
     SLR_ENTRY="$UMU_SLR"
