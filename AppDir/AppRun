@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Paths
 HERE="$(dirname "$(readlink -f "${0}")")"
 export APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
 APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
 APPS_DIR="$HOME/.local/share/applications"
 
-# Installation / Uninstallation Logic
 if [[ "$1" == "--install" ]]; then
     mkdir -p "$APPS_DIR"
     echo "Installing desktop shortcuts and MIME types..."
@@ -72,7 +70,6 @@ Terminal=false
 Categories=Utility;
 EOF
 
-    # Make all created desktop entries executable
     chmod +x "$APPS_DIR"/run-proton.desktop \
              "$APPS_DIR"/proton-explorer.desktop \
              "$APPS_DIR"/proton-winecfg.desktop \
@@ -102,7 +99,6 @@ elif [[ "$1" == "--uninstall" ]]; then
     exit 0
 fi
 
-# GUI Menu Logic with Tkinter Fallback
 if [ -z "$1" ]; then
     if python3 -c "import tkinter" &>/dev/null; then
         python3 - << EOF
@@ -153,7 +149,6 @@ EOF
     fi
 fi
 
-# Path Resolution Logic
 if [ -f "$1" ]; then
     REAL_PATH=$(readlink -f "$1")
     shift
@@ -161,11 +156,9 @@ if [ -f "$1" ]; then
     echo "Resolved shortcut/link to: $REAL_PATH"
 fi
 
-# AppImage Mount & Prefix Paths
 MOUNT_DIR="${APPDIR:-$HERE}"
 PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
 
-# Internal Proton Paths (loaded directly from AppImage mount point)
 INTERNAL_PROTON_BASE="$MOUNT_DIR/opt/Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
 
@@ -174,7 +167,6 @@ if [ ! -f "$INTERNAL_PROTON_SCRIPT" ]; then
     exit 1
 fi
 
-# Export Environment Variables
 export WINEPREFIX="$PROTON_PREFIX/pfx"
 export STEAM_COMPAT_DATA_PATH="$PROTON_PREFIX"
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="$PROTON_PREFIX"
@@ -196,7 +188,6 @@ export WINESYNC=1
 for dir in "$HOME"/.local/share/umu/steamrt4/*/*/*/{i386,x86_64}-linux-gnu; do
     [ -d "$dir" ] && export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$dir"
 done
-
 
 if [ ! -d "$PROTON_PREFIX/pfx" ]; then
     echo "First run or prefix incomplete. Initializing Proton prefix..."
