@@ -2,7 +2,7 @@
 
 # Paths
 HERE="$(dirname "$(readlink -f "${0}")")"
-export APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0") }"
+export APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
 APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
 APPS_DIR="$HOME/.local/share/applications"
 
@@ -72,7 +72,14 @@ Terminal=false
 Categories=Utility;
 EOF
 
-    chmod +x "$APPS_DIR"/run-proton.desktop "$APPS_DIR"/proton-explorer.desktop "$APPS_DIR"/proton-winecfg.desktop "$APPS_DIR"/proton-reboot.desktop "$APPS_DIR"/proton-cmd.desktop "$APPS_DIR"/proton-control.desktop
+    # Make all created desktop entries executable
+    chmod +x "$APPS_DIR"/run-proton.desktop \
+             "$APPS_DIR"/proton-explorer.desktop \
+             "$APPS_DIR"/proton-winecfg.desktop \
+             "$APPS_DIR"/proton-reboot.desktop \
+             "$APPS_DIR"/proton-cmd.desktop \
+             "$APPS_DIR"/proton-control.desktop
+
     xdg-mime default run-proton.desktop application/x-ms-dos-executable
     xdg-mime default run-proton.desktop application/x-msi
     xdg-mime default run-proton.desktop application/x-msdownload
@@ -82,7 +89,13 @@ EOF
 
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
-    rm -f "$APPS_DIR/run-proton.desktop" "$APPS_DIR/proton-explorer.desktop" "$APPS_DIR/proton-winecfg.desktop" "$APPS_DIR/proton-reboot.desktop" "$APPS_DIR/proton-cmd.desktop" "$APPS_DIR/proton-control.desktop"
+    rm -f "$APPS_DIR/run-proton.desktop" \
+          "$APPS_DIR/proton-explorer.desktop" \
+          "$APPS_DIR/proton-winecfg.desktop" \
+          "$APPS_DIR/proton-reboot.desktop" \
+          "$APPS_DIR/proton-cmd.desktop" \
+          "$APPS_DIR/proton-control.desktop"
+
     xdg-mime uninstall "$APPS_DIR/run-proton.desktop" 2>/dev/null
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Uninstallation complete!"
@@ -92,9 +105,10 @@ fi
 # GUI Menu Logic with Tkinter Fallback
 if [ -z "$1" ]; then
     if python3 -c "import tkinter" &>/dev/null; then
-        python3 - <<'EOF'
+        python3 - << EOF
 import os
 import subprocess
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
@@ -147,36 +161,50 @@ if [ -f "$1" ]; then
     echo "Resolved shortcut/link to: $REAL_PATH"
 fi
 
+# AppImage Mount & Prefix Paths
+MOUNT_DIR="${APPDIR:-$HERE}"
+PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
+
+# Internal Proton Paths (loaded directly from AppImage mount point)
+INTERNAL_PROTON_BASE="$MOUNT_DIR/opt/Proton"
+INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
+
+if [ ! -f "$INTERNAL_PROTON_SCRIPT" ]; then
+    echo "Error: Could not locate Proton executable at $INTERNAL_PROTON_SCRIPT"
+    exit 1
+fi
+
 # Export Environment Variables
-export WINEPREFIX="$APPIMAGE_DIR/pfx"
-export STEAM_COMPAT_DATA_PATH="$APPIMAGE_DIR"
-export STEAM_COMPAT_CLIENT_INSTALL_PATH="$APPIMAGE_DIR"
+export WINEPREFIX="$PROTON_PREFIX/pfx"
+export STEAM_COMPAT_DATA_PATH="$PROTON_PREFIX"
+export STEAM_COMPAT_CLIENT_INSTALL_PATH="$PROTON_PREFIX"
+export WINEDLLPATH="$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE/files/lib/wine"
 export PROTON_DISABLE_LSTEAMCLIENT=1
 export PROTON_NO_STEAM=1
 export PROTON_USE_WOW64=1
-export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa718,0x20d6/0xa71a,0x20d6/0xa71b,0x20d6/0xa71c,0x20d6/0xa71d,0x20d6/0xa71e,0x20d6/0xa71f"
+export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714"
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
-mkdir -p "$APPIMAGE_DIR/gstreamer-1.0/"
-export WINE_GST_REGISTRY_DIR="$APPIMAGE_DIR/gstreamer-1.0/"
+mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
+export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
 
 # Function to add paths to LD_LIBRARY_PATH without duplicates
 add_to_ld_library_path() {
     local new_path="$1"
-    if [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
+    if [ -z "$LD_LIBRARY_PATH" ]; then
+        export LD_LIBRARY_PATH="$new_path"
+    elif [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
         export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$new_path"
     fi
 }
 
-# Add only the exact UMU library directories to avoid long recursive paths
+# Scan UMU library directories and add subdirectories to LD_LIBRARY_PATH
 UMU_DIR="$HOME/.local/share/umu/steamrt4/"
-for libdir in "$UMU_DIR/i386-linux-gnu" "$UMU_DIR/x86_64-linux-gnu"; do
-    if [ -d "$libdir" ]; then
-        add_to_ld_library_path "$libdir"
-    fi
-done
-
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+if [ -d "$UMU_DIR" ]; then
+    while IFS= read -r -d '' dir; do
+        add_to_ld_library_path "$dir"
+    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
+fi
 
 export PROTON_NO_ESYNC=0
 export WINEESYNC=1
@@ -184,7 +212,10 @@ export PROTON_NO_FSYNC=0
 export WINEFSYNC=1
 export WINESYNC=1
 
-echo "Launching Wine..."
-exec "$APPIMAGE_PATH" run "$@"
+if [ ! -d "$PROTON_PREFIX/pfx" ]; then
+    echo "First run or prefix incomplete. Initializing Proton prefix..."
+    python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+fi
 
-exit 1
+echo "Launching Wine..."
+exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
