@@ -185,9 +185,25 @@ export PROTON_NO_FSYNC=0
 export WINEFSYNC=1
 export WINESYNC=1
 
-for dir in "$HOME"/.local/share/umu/steamrt4/*/*/*/{i386,x86_64}-linux-gnu; do
-    [ -d "$dir" ] && export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$dir"
-done
+add_to_ld_library_path() {
+    local new_path="$1"
+    if [ -z "$LD_LIBRARY_PATH" ]; then
+        export LD_LIBRARY_PATH="$new_path"
+    elif [[ ":$LD_LIBRARY_PATH:" != *":$new_path:"* ]]; then
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$new_path"
+    fi
+}
+
+# Scan UMU library directories and add subdirectories to LD_LIBRARY_PATH
+UMU_DIR="$HOME/.local/share/umu/steamrt4/"
+if [ -d "$UMU_DIR" ]; then
+    while IFS= read -r -d '' dir; do
+        add_to_ld_library_path "$dir"
+    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -not -path "*/alsa-lib*" -print0)
+fi
+
+
+
 
 if [ ! -d "$PROTON_PREFIX/pfx" ]; then
     echo "First run or prefix incomplete. Initializing Proton prefix..."
