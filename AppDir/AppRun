@@ -131,7 +131,7 @@ def execute(args):
 
 root = tk.Tk()
 root.title("Proton Standalone")
-root.geometry("340x280")
+root.geometry("340x380")
 root.resizable(False, False)
 
 frame = tk.Frame(root, padx=15, pady=15)
@@ -143,6 +143,8 @@ label.pack(pady=(0, 10))
 buttons = [
     ("Launch Wine Explorer", lambda: execute(["explorer"])),
     ("Launch Winecfg", lambda: execute(["winecfg"])),
+    ("Launch cmd", lambda: execute(["cmd"])),
+    ("Launch regedit", lambda: execute(["regedit"])),
     ("Kill Wine (wineboot -k)", lambda: execute(["wineboot", "-k"])),
     ("Install MIME Integration", lambda: execute(["--install"])),
     ("Uninstall MIME Integration", lambda: execute(["--uninstall"]))
