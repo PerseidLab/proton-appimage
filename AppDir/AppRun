@@ -63,7 +63,6 @@ EOF
     cat <<EOF > "$APPS_DIR/proton-control.desktop"
 [Desktop Entry]
 Name=Proton Control Panel
-Exec="$APPS_DIR/proton-control.desktop"
 Exec="$APPIMAGE_PATH" control
 Icon=preferences-system
 Type=Application
@@ -208,30 +207,47 @@ add_to_ld_library_path() {
     fi
 }
 
-UMU_DIR="$HOME/.local/share/umu/steamrt4/"
-#UMU_DIR="$HOME/.local/share/umu/steamrt3/"
-if [ -d "$UMU_DIR" ]; then
-    while IFS= read -r -d '' dir; do
-        add_to_ld_library_path "$dir"
-    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -not -path "*/alsa-lib*" -print0)
-fi
-
 export PROTON_NO_ESYNC=0
 export WINEESYNC=1
 export PROTON_NO_FSYNC=0
 export WINEFSYNC=1
 export WINESYNC=1
 
+
+SLR_ENTRY=""
+
+#UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
+#STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
+
+UMU_SLR="$HOME/.local/share/umu/steamrt4/_v2-entry-point"
+STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point"
+
+if [ -f "$UMU_SLR" ]; then
+    SLR_ENTRY="$UMU_SLR"
+elif [ -f "$STEAM_SLR" ]; then
+    SLR_ENTRY="$STEAM_SLR"
+fi
+
 if [ ! -f "$PROTON_PREFIX/tracked_files" ]; then
     echo "First run or prefix incomplete. Launching Proton..."
     if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
-        python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+        if [ -n "$SLR_ENTRY" ]; then
+            "$SLR_ENTRY" -- verb python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+        else
+            python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+        fi
     fi
 fi
 
 echo "Launching Wine..."
 if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
-    exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+    if [ -n "$SLR_ENTRY" ]; then
+        echo "Using Steam Linux Runtime: $SLR_ENTRY"
+        exec "$SLR_ENTRY" -- verb python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+    else
+        echo "Steam Linux Runtime not found. Executing Proton directly..."
+        exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+    fi
 fi
 
 exit 1
