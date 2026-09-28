@@ -222,7 +222,7 @@ if [ ! -f "$PROTON_PREFIX/tracked_files" ]; then
     echo "First run or prefix incomplete. Launching Proton..."
     if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
         if [ -n "$SLR_ENTRY" ]; then
-            "$SLR_ENTRY" -- verb python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
+            "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
         else
             python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
         fi
@@ -233,11 +233,13 @@ echo "Launching Wine..."
 if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
     if [ -n "$SLR_ENTRY" ]; then
         echo "Using Steam Linux Runtime: $SLR_ENTRY"
-        exec "$SLR_ENTRY" -- verb python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
+        exec "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
     else
         echo "Steam Linux Runtime not found. Executing Proton directly..."
         exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
     fi
 fi
+
+exit 1
 
 exit 1
