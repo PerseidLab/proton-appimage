@@ -213,7 +213,7 @@ UMU_DIR="$HOME/.local/share/umu/steamrt4/"
 if [ -d "$UMU_DIR" ]; then
     while IFS= read -r -d '' dir; do
         add_to_ld_library_path "$dir"
-    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -print0)
+    done < <(find "$UMU_DIR" -type d \( -name "i386-linux-gnu" -o -name "x86_64-linux-gnu" \) -not -path "*/alsa-lib*" -print0)
 fi
 
 export PROTON_NO_ESYNC=0
