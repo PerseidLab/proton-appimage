@@ -1,9 +1,10 @@
 #!/bin/bash
 
-HERE="$(dirname "$(readlink -f "${0}")")"
-export APPIMAGE_PATH="${APPIMAGE:-$(readlink -f "$0")}"
-APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
-APPS_DIR="$HOME/.local/share/applications"
+HERE="${HERE:-$(dirname "$(readlink -f "${0}")")}"
+APPIMAGE_PATH="${APPIMAGE_PATH:-${APPIMAGE:-$(readlink -f "$0")}}"
+export APPIMAGE_PATH
+APPIMAGE_DIR="${APPIMAGE_DIR:-$(dirname "$APPIMAGE_PATH")}"
+APPS_DIR="${APPS_DIR:-$HOME/.local/share/applications}"
 
 if [[ "$1" == "--install" ]]; then
     mkdir -p "$APPS_DIR"
@@ -170,13 +171,13 @@ if [ -f "$1" ]; then
     echo "Resolved shortcut/link to: $REAL_PATH"
 fi
 
-PROTON_PREFIX="$APPIMAGE_DIR/protonprefix"
+PROTON_PREFIX="${PROTON_PREFIX:-$APPIMAGE_DIR/protonprefix}"
 
-INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/Proton"
-INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
+INTERNAL_PROTON_BASE="${INTERNAL_PROTON_BASE:-$PROTON_PREFIX/opt/Proton}"
+INTERNAL_PROTON_SCRIPT="${INTERNAL_PROTON_SCRIPT:-$INTERNAL_PROTON_BASE/proton}"
 
-APPIMAGE_MARKER="$PROTON_PREFIX/.appimage_extracted"
-APPIMAGE_VERSION_FILE="$PROTON_PREFIX/.appimage_version"
+APPIMAGE_MARKER="${APPIMAGE_MARKER:-$PROTON_PREFIX/.appimage_extracted}"
+APPIMAGE_VERSION_FILE="${APPIMAGE_VERSION_FILE:-$PROTON_PREFIX/.appimage_version}"
 
 if command -v sha256sum >/dev/null 2>&1; then
     APPIMAGE_VERSION="$(sha256sum "$APPIMAGE_PATH" 2>/dev/null | awk '{print $1}')"
@@ -219,32 +220,29 @@ else
     echo "AppImage version matches; skipping extraction..."
 fi
 
-export WINEPREFIX="$PROTON_PREFIX/pfx"
-export STEAM_COMPAT_DATA_PATH="$PROTON_PREFIX"
-export STEAM_COMPAT_CLIENT_INSTALL_PATH="$PROTON_PREFIX"
-export WINEDLLPATH="$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE/files/lib/wine"
-export PROTON_DISABLE_LSTEAMCLIENT=1
-export PROTON_NO_STEAM=1
-export PROTON_USE_WOW64=1
-export SDL_GAMECONTROLLER_IGNORE_DEVICES="$SDL_GAMECONTROLLER_IGNORE_DEVICES,0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714"
-export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
-export SDL_GAMECONTROLLER_USE_BUTTON_LABELS=1
+export WINEPREFIX="${WINEPREFIX:-$PROTON_PREFIX/pfx}"
+export STEAM_COMPAT_DATA_PATH="${STEAM_COMPAT_DATA_PATH:-$PROTON_PREFIX}"
+export STEAM_COMPAT_CLIENT_INSTALL_PATH="${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$PROTON_PREFIX}"
+export WINEDLLPATH="${WINEDLLPATH:-$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE/files/lib/wine}"
+export PROTON_DISABLE_LSTEAMCLIENT="${PROTON_DISABLE_LSTEAMCLIENT:-1}"
+export PROTON_NO_STEAM="${PROTON_NO_STEAM:-1}"
+export PROTON_USE_WOW64="${PROTON_USE_WOW64:-1}"
+export SDL_GAMECONTROLLER_IGNORE_DEVICES="${SDL_GAMECONTROLLER_IGNORE_DEVICES:-0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714}"
+export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD="${SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD:-1}"
+export SDL_GAMECONTROLLER_USE_BUTTON_LABELS="${SDL_GAMECONTROLLER_USE_BUTTON_LABELS:-1}"
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
-export WINE_GST_REGISTRY_DIR="$PROTON_PREFIX/gstreamer-1.0/"
-export PROTON_NO_ESYNC=0
-export WINEESYNC=1
-export PROTON_NO_FSYNC=0
-export WINEFSYNC=1
-export WINESYNC=1
+export WINE_GST_REGISTRY_DIR="${WINE_GST_REGISTRY_DIR:-$PROTON_PREFIX/gstreamer-1.0/}"
+export PROTON_NO_ESYNC="${PROTON_NO_ESYNC:-0}"
+export WINEESYNC="${WINEESYNC:-1}"
+export PROTON_NO_FSYNC="${PROTON_NO_FSYNC:-0}"
+export WINEFSYNC="${WINEFSYNC:-1}"
+export WINESYNC="${WINESYNC:-1}"
 
 
 SLR_ENTRY=""
 
-#UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
-#STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
-
-UMU_SLR="$HOME/.local/share/umu/steamrt4/_v2-entry-point"
-STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point"
+UMU_SLR="${UMU_SLR:-$HOME/.local/share/umu/steamrt4/_v2-entry-point}"
+STEAM_SLR="${STEAM_SLR:-$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point}"
 
 if [ -f "$UMU_SLR" ]; then
     SLR_ENTRY="$UMU_SLR"
