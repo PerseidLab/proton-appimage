@@ -176,7 +176,23 @@ INTERNAL_PROTON_BASE="$PROTON_PREFIX/opt/Proton"
 INTERNAL_PROTON_SCRIPT="$INTERNAL_PROTON_BASE/proton"
 
 APPIMAGE_MARKER="$PROTON_PREFIX/.appimage_extracted"
-if [ ! -f "$APPIMAGE_MARKER" ]; then
+APPIMAGE_VERSION_FILE="$PROTON_PREFIX/.appimage_version"
+
+if command -v sha256sum >/dev/null 2>&1; then
+    APPIMAGE_VERSION="$(sha256sum "$APPIMAGE_PATH" 2>/dev/null | awk '{print $1}')"
+elif command -v md5sum >/dev/null 2>&1; then
+    APPIMAGE_VERSION="$(md5sum "$APPIMAGE_PATH" 2>/dev/null | awk '{print $1}')"
+else
+    APPIMAGE_VERSION=""
+fi
+
+# Re-extract only if the AppImage checksum changed or the extracted payload is missing.
+if [ ! -f "$APPIMAGE_PATH" ] || [ ! -f "$APPIMAGE_MARKER" ] || [ ! -f "$APPIMAGE_VERSION_FILE" ] || [ -z "$APPIMAGE_VERSION" ] || [ "$(cat "$APPIMAGE_VERSION_FILE" 2>/dev/null)" != "$APPIMAGE_VERSION" ] || [ ! -f "$INTERNAL_PROTON_SCRIPT" ]; then
+    echo "AppImage version changed, missing marker, or extracted payload is missing; refreshing extraction..."
+    rm -rf "$INTERNAL_PROTON_BASE"
+    rm -rf "$PROTON_PREFIX/squashfs-root"
+    rm -f "$APPIMAGE_MARKER" "$APPIMAGE_VERSION_FILE"
+
     echo "Extracting AppImage to $PROTON_PREFIX..."
     mkdir -p "$PROTON_PREFIX"
 
@@ -193,10 +209,14 @@ if [ ! -f "$APPIMAGE_MARKER" ]; then
         shopt -u dotglob
     fi
 
+    if [ -n "$APPIMAGE_VERSION" ]; then
+        printf '%s\n' "$APPIMAGE_VERSION" > "$APPIMAGE_VERSION_FILE"
+    fi
+
     touch "$APPIMAGE_MARKER"
     echo "AppImage extracted successfully!"
 else
-    echo "AppImage already extracted, skipping extraction..."
+    echo "AppImage version matches; skipping extraction..."
 fi
 
 export WINEPREFIX="$PROTON_PREFIX/pfx"
