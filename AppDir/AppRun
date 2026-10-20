@@ -78,7 +78,6 @@ EOF
              "$APPS_DIR"/proton-cmd.desktop \
              "$APPS_DIR"/proton-control.desktop
 
-    # Register default applications
     xdg-mime default run-proton.desktop application/x-ms-dos-executable
     xdg-mime default run-proton.desktop application/x-msi
     xdg-mime default run-proton.desktop application/x-msdownload
@@ -90,16 +89,13 @@ EOF
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
 
-    # Clear MIME default associations
     for mime in application/x-ms-dos-executable application/x-msi application/x-msdownload; do
         current_default=$(xdg-mime query default "$mime")
         if [[ "$current_default" == "run-proton.desktop" ]]; then
-            # Revert default association by removing entry from mimeapps.list if present
             sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
         fi
     done
 
-    # Remove shortcut files
     rm -f "$APPS_DIR/run-proton.desktop" \
           "$APPS_DIR/proton-explorer.desktop" \
           "$APPS_DIR/proton-winecfg.desktop" \
@@ -172,10 +168,8 @@ if [ -f "$1" ]; then
 fi
 
 PROTON_PREFIX="${PROTON_PREFIX:-$APPIMAGE_DIR/protonprefix}"
-
 INTERNAL_PROTON_BASE="${INTERNAL_PROTON_BASE:-$PROTON_PREFIX/opt/Proton}"
 INTERNAL_PROTON_SCRIPT="${INTERNAL_PROTON_SCRIPT:-$INTERNAL_PROTON_BASE/proton}"
-
 APPIMAGE_MARKER="${APPIMAGE_MARKER:-$PROTON_PREFIX/.appimage_extracted}"
 APPIMAGE_VERSION_FILE="${APPIMAGE_VERSION_FILE:-$PROTON_PREFIX/.appimage_version}"
 
@@ -187,7 +181,6 @@ else
     APPIMAGE_VERSION=""
 fi
 
-# Re-extract only if the AppImage checksum changed or the extracted payload is missing.
 if [ ! -f "$APPIMAGE_PATH" ] || [ ! -f "$APPIMAGE_MARKER" ] || [ ! -f "$APPIMAGE_VERSION_FILE" ] || [ -z "$APPIMAGE_VERSION" ] || [ "$(cat "$APPIMAGE_VERSION_FILE" 2>/dev/null)" != "$APPIMAGE_VERSION" ] || [ ! -f "$INTERNAL_PROTON_SCRIPT" ]; then
     echo "AppImage version changed, missing marker, or extracted payload is missing; refreshing extraction..."
     rm -rf "$INTERNAL_PROTON_BASE"
@@ -238,9 +231,7 @@ export PROTON_NO_FSYNC="${PROTON_NO_FSYNC:-0}"
 export WINEFSYNC="${WINEFSYNC:-1}"
 export WINESYNC="${WINESYNC:-1}"
 
-
 SLR_ENTRY=""
-
 UMU_SLR="${UMU_SLR:-$HOME/.local/share/umu/steamrt4/_v2-entry-point}"
 STEAM_SLR="${STEAM_SLR:-$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point}"
 
