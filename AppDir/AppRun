@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 HERE="${HERE:-$(dirname "$(readlink -f "${0}")")}"
@@ -6,16 +5,6 @@ APPIMAGE_PATH="${APPIMAGE_PATH:-${APPIMAGE:-$(readlink -f "$0")}}"
 export APPIMAGE_PATH
 APPIMAGE_DIR="${APPIMAGE_DIR:-$(dirname "$APPIMAGE_PATH")}"
 APPS_DIR="${APPS_DIR:-$HOME/.local/share/applications}"
-
-MIME_TYPES=(
-    application/x-ms-dos-executable
-    application/x-msi
-    application/x-msdownload
-    application/x-msdos-program
-    application/x-msdos-batch
-    application/x-bat
-    application/x-cmd
-)
 
 if [[ "$1" == "--install" ]]; then
     mkdir -p "$APPS_DIR"
@@ -29,7 +18,7 @@ Icon=steam
 Type=Application
 Terminal=false
 Categories=Utility;
-MimeType=application/x-ms-dos-executable;application/x-msi;application/x-msdownload;application/x-msdos-program;application/x-msdos-batch;application/x-bat;application/x-cmd;
+MimeType=application/x-ms-dos-executable;application/x-msi;application/x-msdownload;
 EOF
 
     cat <<EOF > "$APPS_DIR/proton-explorer.desktop"
@@ -89,9 +78,9 @@ EOF
              "$APPS_DIR"/proton-cmd.desktop \
              "$APPS_DIR"/proton-control.desktop
 
-    for mime in "${MIME_TYPES[@]}"; do
-        xdg-mime default run-proton.desktop "$mime"
-    done
+    xdg-mime default run-proton.desktop application/x-ms-dos-executable
+    xdg-mime default run-proton.desktop application/x-msi
+    xdg-mime default run-proton.desktop application/x-msdownload
 
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Installation complete!"
@@ -100,7 +89,7 @@ EOF
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
 
-    for mime in "${MIME_TYPES[@]}"; do
+    for mime in application/x-ms-dos-executable application/x-msi application/x-msdownload; do
         current_default=$(xdg-mime query default "$mime")
         if [[ "$current_default" == "run-proton.desktop" ]]; then
             sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
