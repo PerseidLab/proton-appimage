@@ -93,7 +93,7 @@ EOF
         xdg-mime default run-proton.desktop "$mime"
     done
 
-    update-desktop-database "$APPS_DIR" 2>/dev/null || true
+    update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Installation complete!"
     exit 0
 
@@ -101,8 +101,7 @@ elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
 
     for mime in "${MIME_TYPES[@]}"; do
-        current_default=$(xdg-mime query default "$mime" 2>/dev/null || true)
-
+        current_default=$(xdg-mime query default "$mime")
         if [[ "$current_default" == "run-proton.desktop" ]]; then
             sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
         fi
@@ -115,7 +114,7 @@ elif [[ "$1" == "--uninstall" ]]; then
           "$APPS_DIR/proton-cmd.desktop" \
           "$APPS_DIR/proton-control.desktop"
 
-    update-desktop-database "$APPS_DIR" 2>/dev/null || true
+    update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Uninstallation complete!"
     exit 0
 fi
