@@ -18,7 +18,7 @@ Icon=steam
 Type=Application
 Terminal=false
 Categories=Utility;
-MimeType=application/x-ms-dos-executable;application/x-msi;application/x-msdownload;
+MimeType=application/x-ms-dos-executable;application/x-msi;application/x-msdownload;application/x-msdos-program;application/x-msdos-batch;application/x-bat;application/x-cmd;
 EOF
 
     cat <<EOF > "$APPS_DIR/proton-explorer.desktop"
@@ -81,6 +81,10 @@ EOF
     xdg-mime default run-proton.desktop application/x-ms-dos-executable
     xdg-mime default run-proton.desktop application/x-msi
     xdg-mime default run-proton.desktop application/x-msdownload
+    xdg-mime default run-proton.desktop application/x-msdos-program
+    xdg-mime default run-proton.desktop application/x-msdos-batch
+    xdg-mime default run-proton.desktop application/x-bat
+    xdg-mime default run-proton.desktop application/x-cmd
 
     update-desktop-database "$APPS_DIR" 2>/dev/null
     echo "Installation complete!"
@@ -89,7 +93,15 @@ EOF
 elif [[ "$1" == "--uninstall" ]]; then
     echo "Removing shortcuts and resetting MIME types..."
 
-    for mime in application/x-ms-dos-executable application/x-msi application/x-msdownload; do
+    for mime in \
+        application/x-ms-dos-executable \
+        application/x-msi \
+        application/x-msdownload \
+        application/x-msdos-program \
+        application/x-msdos-batch \
+        application/x-bat \
+        application/x-cmd
+    do
         current_default=$(xdg-mime query default "$mime")
         if [[ "$current_default" == "run-proton.desktop" ]]; then
             sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
