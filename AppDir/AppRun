@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 HERE="${HERE:-$(dirname "$(readlink -f "${0}")")}"
@@ -6,127 +5,6 @@ APPIMAGE_PATH="${APPIMAGE_PATH:-${APPIMAGE:-$(readlink -f "$0")}}"
 export APPIMAGE_PATH
 APPIMAGE_DIR="${APPIMAGE_DIR:-$(dirname "$APPIMAGE_PATH")}"
 APPS_DIR="${APPS_DIR:-$HOME/.local/share/applications}"
-
-LOADING_PID=""
-
-
-show_loading() {
-    local message="${1:-Please wait...}"
-    local title="${2:-Proton Standalone}"
-
-    close_loading
-
-    if ! command -v python3 >/dev/null 2>&1 ||
-       ! python3 -c "import tkinter" >/dev/null 2>&1; then
-        return 0
-    fi
-
-    python3 - "$message" "$title" <<'PY' >/dev/null 2>&1 &
-import sys
-import tkinter as tk
-from tkinter import ttk
-
-message = sys.argv[1]
-title = sys.argv[2]
-
-root = tk.Tk()
-root.title(title)
-root.geometry("320x110")
-root.resizable(False, False)
-root.attributes("-topmost", True)
-
-root.update_idletasks()
-
-x = (root.winfo_screenwidth() - 320) // 2
-y = (root.winfo_screenheight() - 110) // 2
-
-root.geometry(f"320x110+{x}+{y}")
-
-frame = ttk.Frame(root, padding=16)
-frame.pack(fill="both", expand=True)
-
-label = ttk.Label(
-    frame,
-    text=message,
-    anchor="center",
-    font=("Sans", 10)
-)
-label.pack(fill="x", pady=(2, 12))
-
-progress = ttk.Progressbar(
-    frame,
-    mode="indeterminate"
-)
-progress.pack(fill="x")
-
-progress.start(10)
-
-root.mainloop()
-PY
-
-    LOADING_PID=$!
-
-    sleep 0.25
-}
-
-close_loading() {
-    if [ -n "${LOADING_PID:-}" ]; then
-        kill "$LOADING_PID" 2>/dev/null || true
-        wait "$LOADING_PID" 2>/dev/null || true
-        LOADING_PID=""
-    fi
-}
-
-trap close_loading EXIT
-
-
-wait_for_wine_start() {
-    local parent_pid="$1"
-    local timeout="${2:-45}"
-    local elapsed=0
-    local children
-    local child
-    local exe
-    local name
-
-    while kill -0 "$parent_pid" 2>/dev/null; do
-
-        local queue=("$parent_pid")
-
-        while [ ${#queue[@]} -gt 0 ]; do
-            local current="${queue[0]}"
-            queue=("${queue[@]:1}")
-
-            [ -d "/proc/$current" ] || continue
-
-            exe=$(readlink "/proc/$current/exe" 2>/dev/null || true)
-            name="${exe##*/}"
-
-            case "$name" in
-                wine|wine64|wine-preloader|wine64-preloader|wineserver)
-                    return 0
-                    ;;
-            esac
-
-            children=$(cat "/proc/$current/task/$current/children" 2>/dev/null || true)
-
-            for child in $children; do
-                queue+=("$child")
-            done
-        done
-
-        if [ "$elapsed" -ge "$timeout" ]; then
-            return 1
-        fi
-
-        sleep 0.25
-        elapsed=$((elapsed + 1))
-    done
-
-    return 1
-}
-
-
 
 if [[ "$1" == "--install" ]]; then
     mkdir -p "$APPS_DIR"
@@ -209,7 +87,6 @@ EOF
     xdg-mime default run-proton.desktop application/x-cmd
 
     update-desktop-database "$APPS_DIR" 2>/dev/null
-
     echo "Installation complete!"
     exit 0
 
@@ -226,10 +103,8 @@ elif [[ "$1" == "--uninstall" ]]; then
         application/x-cmd
     do
         current_default=$(xdg-mime query default "$mime")
-
         if [[ "$current_default" == "run-proton.desktop" ]]; then
-            sed -i "/$mime=run-proton.desktop/d" \
-                "$HOME/.config/mimeapps.list" 2>/dev/null || true
+            sed -i "/$mime=run-proton.desktop/d" "$HOME/.config/mimeapps.list" 2>/dev/null || true
         fi
     done
 
@@ -241,19 +116,16 @@ elif [[ "$1" == "--uninstall" ]]; then
           "$APPS_DIR/proton-control.desktop"
 
     update-desktop-database "$APPS_DIR" 2>/dev/null
-
     echo "Uninstallation complete!"
     exit 0
 fi
 
-
-
 if [ -z "$1" ]; then
     if python3 -c "import tkinter" &>/dev/null; then
-
-        python3 - <<'EOF'
+        python3 - << EOF
 import os
 import subprocess
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
@@ -261,12 +133,10 @@ appimage = os.getenv("APPIMAGE_PATH")
 
 def execute(args):
     try:
-        subprocess.Popen([appimage] + args)
+        cmd = [appimage] + args
+        subprocess.Popen(cmd)
     except Exception as e:
-        messagebox.showerror(
-            "Error",
-            f"Failed to execute command:\n{e}"
-        )
+        messagebox.showerror("Error", f"Failed to execute command:\n{e}")
 
 root = tk.Tk()
 root.title("Proton Standalone")
@@ -276,11 +146,7 @@ root.resizable(False, False)
 frame = tk.Frame(root, padx=15, pady=15)
 frame.pack(fill="both", expand=True)
 
-label = tk.Label(
-    frame,
-    text="Proton Runner Options",
-    font=("Helvetica", 11, "bold")
-)
+label = tk.Label(frame, text="Proton Runner Options", font=("Helvetica", 11, "bold"))
 label.pack(pady=(0, 10))
 
 buttons = [
@@ -299,15 +165,12 @@ for text, cmd in buttons:
 
 root.mainloop()
 EOF
-
         exit 0
     else
         echo "Tkinter non-functional or not found. Falling back to default 'explorer'..."
         set -- "explorer"
     fi
 fi
-
-
 
 if [ -f "$1" ]; then
     REAL_PATH=$(readlink -f "$1")
@@ -316,15 +179,11 @@ if [ -f "$1" ]; then
     echo "Resolved shortcut/link to: $REAL_PATH"
 fi
 
-
-
 PROTON_PREFIX="${PROTON_PREFIX:-$APPIMAGE_DIR/protonprefix}"
 INTERNAL_PROTON_BASE="${INTERNAL_PROTON_BASE:-$PROTON_PREFIX/opt/Proton}"
 INTERNAL_PROTON_SCRIPT="${INTERNAL_PROTON_SCRIPT:-$INTERNAL_PROTON_BASE/proton}"
 APPIMAGE_MARKER="${APPIMAGE_MARKER:-$PROTON_PREFIX/.appimage_extracted}"
 APPIMAGE_VERSION_FILE="${APPIMAGE_VERSION_FILE:-$PROTON_PREFIX/.appimage_version}"
-
-
 
 if command -v sha256sum >/dev/null 2>&1; then
     APPIMAGE_VERSION="$(sha256sum "$APPIMAGE_PATH" 2>/dev/null | awk '{print $1}')"
@@ -334,33 +193,17 @@ else
     APPIMAGE_VERSION=""
 fi
 
-
-if [ ! -f "$APPIMAGE_PATH" ] ||
-   [ ! -f "$APPIMAGE_MARKER" ] ||
-   [ ! -f "$APPIMAGE_VERSION_FILE" ] ||
-   [ -z "$APPIMAGE_VERSION" ] ||
-   [ "$(cat "$APPIMAGE_VERSION_FILE" 2>/dev/null)" != "$APPIMAGE_VERSION" ] ||
-   [ ! -f "$INTERNAL_PROTON_SCRIPT" ]; then
-
+if [ ! -f "$APPIMAGE_PATH" ] || [ ! -f "$APPIMAGE_MARKER" ] || [ ! -f "$APPIMAGE_VERSION_FILE" ] || [ -z "$APPIMAGE_VERSION" ] || [ "$(cat "$APPIMAGE_VERSION_FILE" 2>/dev/null)" != "$APPIMAGE_VERSION" ] || [ ! -f "$INTERNAL_PROTON_SCRIPT" ]; then
     echo "AppImage version changed, missing marker, or extracted payload is missing; refreshing extraction..."
-
-    show_loading "Extracting Proton files..." "Proton Standalone"
-
     rm -rf "$INTERNAL_PROTON_BASE"
     rm -rf "$PROTON_PREFIX/squashfs-root"
     rm -f "$APPIMAGE_MARKER" "$APPIMAGE_VERSION_FILE"
 
     echo "Extracting AppImage to $PROTON_PREFIX..."
-
     mkdir -p "$PROTON_PREFIX"
 
-    cd "$PROTON_PREFIX" || {
-        echo "Error: Cannot access Proton prefix directory."
-        exit 1
-    }
-
+    cd "$PROTON_PREFIX"
     "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1 || {
-        close_loading
         echo "Error: Failed to extract AppImage"
         exit 1
     }
@@ -377,49 +220,33 @@ if [ ! -f "$APPIMAGE_PATH" ] ||
     fi
 
     touch "$APPIMAGE_MARKER"
-
     echo "AppImage extracted successfully!"
-
-    close_loading
-
 else
     echo "AppImage version matches; skipping extraction..."
 fi
 
-
-
 export WINEPREFIX="${WINEPREFIX:-$PROTON_PREFIX/pfx}"
 export STEAM_COMPAT_DATA_PATH="${STEAM_COMPAT_DATA_PATH:-$PROTON_PREFIX}"
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="${STEAM_COMPAT_CLIENT_INSTALL_PATH:-$PROTON_PREFIX}"
-
 export WINEDLLPATH="${WINEDLLPATH:-$INTERNAL_PROTON_BASE/files/lib64/wine:$INTERNAL_PROTON_BASE/files/lib/wine}"
-
 export PROTON_DISABLE_LSTEAMCLIENT="${PROTON_DISABLE_LSTEAMCLIENT:-1}"
 export PROTON_NO_STEAM="${PROTON_NO_STEAM:-1}"
 export PROTON_USE_WOW64="${PROTON_USE_WOW64:-1}"
-
 export SDL_GAMECONTROLLER_IGNORE_DEVICES="${SDL_GAMECONTROLLER_IGNORE_DEVICES:-0x057e/0x2009,0x057e/0x2006,0x057e/0x2007,0x0e6f/0x0180,0x0e6f/0x0184,0x0e6f/0x0185,0x0e6f/0x0188,0x20d6/0xa711,0x20d6/0xa714}"
-
 export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD="${SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD:-1}"
 export SDL_GAMECONTROLLER_USE_BUTTON_LABELS="${SDL_GAMECONTROLLER_USE_BUTTON_LABELS:-1}"
-
 mkdir -p "$PROTON_PREFIX/gstreamer-1.0/"
-
 export WINE_GST_REGISTRY_DIR="${WINE_GST_REGISTRY_DIR:-$PROTON_PREFIX/gstreamer-1.0/}"
-
 export PROTON_NO_ESYNC="${PROTON_NO_ESYNC:-0}"
 export WINEESYNC="${WINEESYNC:-1}"
-
 export PROTON_NO_FSYNC="${PROTON_NO_FSYNC:-0}"
 export WINEFSYNC="${WINEFSYNC:-1}"
 export WINESYNC="${WINESYNC:-1}"
 
-
-
 SLR_ENTRY=""
 
-# UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
-# STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
+#UMU_SLR="$HOME/.local/share/umu/steamrt3/_v2-entry-point"
+#STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point"
 
 UMU_SLR="$HOME/.local/share/umu/steamrt4/_v2-entry-point"
 STEAM_SLR="$HOME/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point"
@@ -430,67 +257,26 @@ elif [ -f "$STEAM_SLR" ]; then
     SLR_ENTRY="$STEAM_SLR"
 fi
 
-
-
 if [ ! -f "$PROTON_PREFIX/tracked_files" ]; then
-
     echo "First run or prefix incomplete. Launching Proton..."
-
     if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
-
-        show_loading "Initializing Wine prefix..." "Proton Standalone"
-
         if [ -n "$SLR_ENTRY" ]; then
-            "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run winecfg &
+            "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
         else
-            python3 "$INTERNAL_PROTON_SCRIPT" run winecfg &
+            python3 "$INTERNAL_PROTON_SCRIPT" run winecfg
         fi
-
-        INIT_PID=$!
-
-
-        wait_for_wine_start "$INIT_PID" 45 || true
-        close_loading
-
-        wait "$INIT_PID"
     fi
 fi
-
-
 
 echo "Launching Wine..."
-
 if [ -f "$INTERNAL_PROTON_SCRIPT" ]; then
-
-    show_loading "Please wait... Starting Wine" "Proton Standalone"
-
     if [ -n "$SLR_ENTRY" ]; then
-
         echo "Using Steam Linux Runtime: $SLR_ENTRY"
-
-        "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run "$@" &
-        WINE_PID=$!
-
+        exec "$SLR_ENTRY" -- python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
     else
-
         echo "Steam Linux Runtime not found. Executing Proton directly..."
-
-        python3 "$INTERNAL_PROTON_SCRIPT" run "$@" &
-        WINE_PID=$!
-
+        exec python3 "$INTERNAL_PROTON_SCRIPT" run "$@"
     fi
-
-
-    wait_for_wine_start "$WINE_PID" 45 || true
-
-    close_loading
-
-
-    wait "$WINE_PID"
-
-    exit $?
-
 fi
 
-echo "Error: Proton script not found: $INTERNAL_PROTON_SCRIPT"
 exit 1
